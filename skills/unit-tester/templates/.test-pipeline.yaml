@@ -1,0 +1,81 @@
+# .test-pipeline.yaml — starter template
+# Copy to your repo root and edit. Full schema: ~/.claude/skills/unit-tester/references/pipeline-config.md
+#
+# Two ready presets below (comment/uncomment). Delete the one you don't use.
+
+# ═══════════════════════════════════════════════════════════════
+# PRESET A — Python (pytest + ruff + mypy + mutmut)
+# ═══════════════════════════════════════════════════════════════
+
+stack: python
+framework: pytest
+test_path_template: "tests/test_{stem}.py"
+
+source_globs: ["src/**/*.py"]
+ignore_globs: ["**/migrations/**", "**/__pycache__/**", "**/conftest.py", "**/*.pyi", "**/_test_double.py"]
+
+validator:
+  lint: "ruff check {file}"
+  typecheck: "mypy --no-error-summary {file}"
+  test: "pytest {file} -x --tb=short -q"
+  test_single: "pytest {file}::{test_name} -x --tb=short -q"
+
+mocks:
+  http: "pytest-httpx"
+  fs: "pyfakefs"
+  time: "freezegun"
+  db: "pytest-postgresql"
+
+mutator: mutmut
+
+philosophy: |
+  - Behavior over implementation. Assert on return values / raised exceptions / observable side effects.
+  - Mock only at process boundaries (HTTP, FS, DB, time, RNG, LLM). Never mock internals of the SUT's module.
+  - Full-equality asserts when the expected value fits on one line.
+  - No `assert result` — always assert a value or a shape.
+  - No snapshot tests unless the output is genuinely opaque.
+  - Parametrize related cases when Arrange is identical.
+  - Freeze time via freezegun for any time-dependent SUT.
+
+coverage_target: branch
+reviewer_threshold: 9
+max_revisions: 3
+max_mutation_attempts: 3
+skip_mutations: false
+
+# ═══════════════════════════════════════════════════════════════
+# PRESET B — TypeScript/React (vitest + eslint + tsc + stryker)
+# ═══════════════════════════════════════════════════════════════
+#
+# stack: typescript
+# framework: vitest
+# test_path_template: "{dir}/{stem}.test.tsx"
+#
+# source_globs: ["src/**/*.{ts,tsx}"]
+# ignore_globs: ["**/*.d.ts", "**/*.stories.tsx", "**/node_modules/**"]
+#
+# validator:
+#   lint: "eslint --no-error-on-unmatched-pattern {file}"
+#   typecheck: "tsc --noEmit --pretty false"
+#   test: "vitest run {file} --reporter=default"
+#   test_single: "vitest run {file} -t \"{test_name}\" --reporter=default"
+#
+# mocks:
+#   http: "msw"
+#   time: "vi.useFakeTimers()"
+#   router: "MemoryRouter"
+#
+# mutator: stryker
+#
+# philosophy: |
+#   - React Testing Library philosophy. Query by role/name/label, not test-id.
+#   - Test user-observable behavior. Never assert on component internals or state.
+#   - Prefer `screen.getByRole` > `getByLabelText` > `getByText` > `getByTestId` (last resort).
+#   - `userEvent`, not `fireEvent`, for user interactions.
+#   - No snapshot tests except for stable opaque output.
+#   - Arrange / Act / Assert visible; blank line between.
+#
+# coverage_target: branch
+# reviewer_threshold: 9
+# max_revisions: 3
+# max_mutation_attempts: 3
